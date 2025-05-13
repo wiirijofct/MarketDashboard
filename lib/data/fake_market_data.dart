@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 
+/// Categories of products sold in the market
 enum Category {
   bakery,
   cleaningProducts,
@@ -12,6 +13,7 @@ enum Category {
   snacks,
 }
 
+/// Extension to provide human-readable labels for categories
 extension CategoryName on Category {
   String get label => switch (this) {
     Category.bakery => 'Bakery',
@@ -25,11 +27,16 @@ extension CategoryName on Category {
   };
 }
 
-/// Data *per category* for a single calendar day
+/// Represents sales data for a specific product category on a single day
 class DailyCategoryData {
-  final double sales; // € revenue
-  final int demand; // units requested (shopping list / enquiries)
-  final int stock; // units that remained on hand at end‑of‑day
+  /// Revenue in euros
+  final double sales;
+
+  /// Number of units requested by customers
+  final int demand;
+
+  /// Number of units remaining in inventory at end of day
+  final int stock;
 
   const DailyCategoryData({
     required this.sales,
@@ -38,32 +45,39 @@ class DailyCategoryData {
   });
 }
 
-/// Data for one date, *all* categories
+/// Aggregates data for all product categories on a specific date
 class DailySnapshot {
+  /// The date of this snapshot
   final DateTime date;
+
+  /// Data for each product category
   final Map<Category, DailyCategoryData> perCat;
 
   const DailySnapshot(this.date, this.perCat);
 }
 
+/// Repository providing access to market data
 class FakeDataRepository {
   static final FakeDataRepository _instance = FakeDataRepository._internal();
+
+  /// Factory constructor that returns singleton instance
   factory FakeDataRepository() => _instance;
 
   final List<DailySnapshot> _days;
 
   FakeDataRepository._internal() : _days = _generateFakeDays();
 
-  // All snapshots, earliest ➜ latest
+  /// All daily snapshots in chronological order
   List<DailySnapshot> get days => _days;
 
-  // ───────── Helpers your UI cards can call ─────────
-
-  /// Total sales of *all* categories for [date].
+  /// Calculates total sales across all categories for a specific date
   double totalSalesOn(DateTime date) =>
       _lookup(date).perCat.values.fold(0.0, (sum, d) => sum + d.sales);
 
-  /// ∆ vs. previous day (‑1 ≈ 100 % drop, 0 = flat, 0.2 = +20 %)
+  /// Calculates growth rate compared to previous day
+  ///
+  /// Returns a value where -1.0 means 100% drop, 0.0 means no change,
+  /// and 0.2 means 20% growth
   double growthSinceYesterday(DateTime date) {
     final idx = _indexOf(date);
     if (idx == 0) return 0;
@@ -72,6 +86,7 @@ class FakeDataRepository {
     return (today - yest) / yest;
   }
 
+  /// Calculates growth rate compared to last week
   double growthSinceLastWeek(DateTime date) {
     final idx = _indexOf(date);
     if (idx < 7) return 0;
@@ -80,6 +95,7 @@ class FakeDataRepository {
     return (today - week) / week;
   }
 
+  /// Calculates growth rate compared to last month
   double growthSinceLastMonth(DateTime date) {
     final idx = _indexOf(date);
     if (idx < 30) return 0;
@@ -88,16 +104,21 @@ class FakeDataRepository {
     return (today - month) / month;
   }
 
+  /// Identifies the category with highest sales on the given date
   Category bestSellingCategory(DateTime date) {
     final map = _lookup(date).perCat;
     return map.keys.reduce((a, b) => map[a]!.sales >= map[b]!.sales ? a : b);
   }
 
+  /// Identifies the category with highest customer demand on the given date
   Category mostDemandedCategory(DateTime date) {
     final map = _lookup(date).perCat;
     return map.keys.reduce((a, b) => map[a]!.demand >= map[b]!.demand ? a : b);
   }
 
+  /// Identifies the category with highest (or lowest) stock levels
+  ///
+  /// Set [lowest] to true to find the category with least stock
   Category stockLeader(DateTime date, {bool lowest = false}) {
     final map = _lookup(date).perCat;
     return map.keys.reduce((a, b) {
@@ -109,8 +130,9 @@ class FakeDataRepository {
     });
   }
 
-  /// Returns a ready‑to‑plot time‑series for the chosen [category] & [metric].
-  ///   metric = 'sales' | 'demand' | 'stock'
+  /// Returns data points for a time-series chart for the specified category and metric
+  ///
+  /// [metric] must be one of: 'sales', 'demand', or 'stock'
   Iterable<FlSpot> timeSeries(Category category, String metric) sync* {
     for (var i = 0; i < _days.length; ++i) {
       final d = _days[i].perCat[category]!;
@@ -118,44 +140,39 @@ class FakeDataRepository {
         'sales' => d.sales,
         'demand' => d.demand.toDouble(),
         'stock' => d.stock.toDouble(),
-        _ => 0,
+        _ => 0.0,
       };
       yield FlSpot(i.toDouble(), y.toDouble());
     }
   }
 
-  // -----------------------------------------------------------------
-  // Private helpers
-  // -----------------------------------------------------------------
-
+  /// Finds the snapshot for a specific date
   DailySnapshot _lookup(DateTime d) =>
       _days.firstWhere((e) => _isSameDate(e.date, d));
 
+  /// Finds the index of a snapshot for a specific date
   int _indexOf(DateTime d) => _days.indexWhere((e) => _isSameDate(e.date, d));
 
+  /// Compares if two dates represent the same calendar day
   static bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  // -----------------------------------------------------------------
-  // Fake data generator
-  // -----------------------------------------------------------------
-
+  /// Generates 180 days of realistic market data
   static List<DailySnapshot> _generateFakeDays() {
-    final rng = Random(42); // stable seed = same data each run
-    // Give every category its own “profile”
+    final rng = Random(42); // stable seed for consistent data across runs
+
+    // Base metrics for each category
     final baseSales = {
-      // € per day
       for (final c in Category.values) c: rng.nextInt(900) + 400,
     };
     final baseDemand = {
-      // units per day
       for (final c in Category.values) c: rng.nextInt(90) + 30,
     };
     final baseStock = {
       for (final c in Category.values) c: rng.nextInt(900) + 600,
     };
 
-    // Simulate 180 days (≈ 6 months)
+    // Generate 180 days (approximately 6 months) of data
     final today = DateTime.now();
     final start = today.subtract(const Duration(days: 179));
 
@@ -164,23 +181,22 @@ class FakeDataRepository {
 
     for (int offset = 0; offset < 180; offset++) {
       final date = start.add(Duration(days: offset));
-
       final perCat = <Category, DailyCategoryData>{};
 
       for (final c in Category.values) {
-        // Add gentle upward trend + random daily noise
+        // Model a gentle upward trend with random daily fluctuations
         final dayIdx = offset.toDouble();
-        final trend = 1 + 0.0015 * dayIdx; // +0.15 % per day
+        final trend = 1 + 0.0015 * dayIdx; // +0.15% per day
         final noise = 0.85 + rng.nextDouble() * .3; // 0.85 – 1.15
 
         final sales = baseSales[c]! * trend * noise;
         final demand = (baseDemand[c]! * trend * noise).round();
 
-        // Stock leaves the shop when it’s sold (capped at available units)
+        // Units sold is limited by available stock
         final unitsSold = min(demand, currentStock[c]!);
         currentStock[c] = currentStock[c]! - unitsSold;
 
-        // Re‑stock every Monday
+        // Replenish inventory every Monday
         if (date.weekday == DateTime.monday) {
           currentStock[c] = currentStock[c]! + rng.nextInt(500) + 300;
         }

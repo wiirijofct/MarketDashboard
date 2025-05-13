@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Preset zoom windows the dashboard supports.
+/// Represents predefined date ranges for dashboard filtering.
 enum DateRange { last7, last30, last90, last180 }
 
+/// Extension on DateRange to provide human-readable labels and day calculations.
 extension DateRangeLabel on DateRange {
+  /// Returns a human-readable description of the date range.
   String get label => switch (this) {
     DateRange.last7 => 'Last 7 Days',
     DateRange.last30 => 'Last 30 Days',
@@ -11,7 +13,7 @@ extension DateRangeLabel on DateRange {
     DateRange.last180 => 'Last 6 Months',
   };
 
-  /// Number of trailing days in this range.
+  /// Returns the number of days in this range.
   int get days => switch (this) {
     DateRange.last7 => 7,
     DateRange.last30 => 30,
@@ -20,11 +22,21 @@ extension DateRangeLabel on DateRange {
   };
 }
 
-/// A stylised dropdown that lets the user pick the date window.
+/// A styled dropdown widget that allows users to select a date range.
+///
+/// This widget creates a visually consistent date range selector with a
+/// blue-gray background and white text for improved readability.
 class DateSelector extends StatelessWidget {
+  /// Creates a date selector.
+  ///
+  /// The [range] parameter sets the initially selected date range.
+  /// The [onChanged] callback is called when the user selects a new range.
   const DateSelector({super.key, required this.range, required this.onChanged});
 
+  /// The currently selected date range.
   final DateRange range;
+
+  /// Callback that is called when the selected date range changes.
   final ValueChanged<DateRange> onChanged;
 
   @override

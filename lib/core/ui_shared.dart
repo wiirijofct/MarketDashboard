@@ -1,18 +1,30 @@
 import 'package:flutter/material.dart';
 
-/* ---------- constants everyone can import ------------------------- */
+/// UI constants for consistent sizing and spacing across the application.
 abstract class UI {
+  /// Standard width for cards used throughout the application.
   static const cardWidth = 250.0;
+
+  /// Standard gap between elements.
   static const gap = 24.0;
+
+  /// Standard height for charts.
   static const chartHeight = 450.0;
+
+  /// Standard content width calculation based on cards and gaps.
   static const contentWidth = cardWidth * 3 + gap * 2;
 }
 
-/* ---------- sidebar used by every dashboard ----------------------- */
+/// Sidebar navigation component used across dashboard screens.
 class AppSidebar extends StatelessWidget {
+  /// Creates a sidebar with navigation options.
+  ///
+  /// The [current] parameter highlights the active section.
   const AppSidebar({super.key, required this.current});
 
-  final String current; // "Sales" | "Stock" | "Demand"
+  /// The currently active section identifier.
+  /// Expected values: "Sales", "Stock", or "Demand"
+  final String current;
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +51,17 @@ class AppSidebar extends StatelessWidget {
   }
 }
 
-/* ---------- small grey stat card ---------------------------------- */
+/// A compact card widget for displaying summary statistics.
 class SummaryCard extends StatelessWidget {
+  /// Creates a summary card with a title and value display.
+  ///
+  /// [title] is the label displayed at the top of the card.
+  /// [value] is the primary data point displayed prominently.
+  /// [onTap] enables interaction when the card is tapped.
+  /// [icon] optional icon to display with the data.
+  /// [underline] determines if the value should be underlined.
+  /// [bgColor] customizes the background color (defaults to light grey).
+  /// [cursor] specifies the mouse cursor when hovering (defaults to basic).
   const SummaryCard({
     super.key,
     required this.title,
@@ -63,7 +84,6 @@ class SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = AnimatedContainer(
-      // animate fade in/out
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       width: UI.cardWidth,
@@ -92,7 +112,6 @@ class SummaryCard extends StatelessWidget {
 
     if (onTap == null) return card;
     return MouseRegion(
-      //  ⬅ cursor on hover
       cursor: cursor,
       child: GestureDetector(onTap: onTap, child: card),
     );
